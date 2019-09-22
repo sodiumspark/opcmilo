@@ -7,6 +7,7 @@ import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfigBuilder;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
+import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.BrowseDirection;
@@ -32,85 +33,53 @@ public class Client  {
 
 		new Client();
 
-
-
 		List<EndpointDescription> endpoints = getEndpointDescriptions();
 
 		OpcUaClientConfigBuilder cfg = new OpcUaClientConfigBuilder();
 		cfg.setEndpoint(endpoints.get(0)); 
 
-		OpcUaClient client;
+		OpcUaClient client = null;
+
 		try {
 			client = OpcUaClient.create(cfg.build());
+
+			client.connect().get();
+		} catch (UaException | InterruptedException | ExecutionException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		System.out.println("Connected");
+
+		browseNode("", client, Identifiers.RootFolder);
+
+		Object temp = null;
+		Object pressure = null;
+		Object time = null;
+
+
+		while(true) {
 			try {
-				client.connect().get();
-				}catch(Exception e) {
-					
-					System.out.println("XX Connected");
-				}
-			System.out.println("Connected");
-			// start browsing at root folder
-			//  browseNode("", client, Identifiers.RootFolder);
-
-			new CompletableFuture<>();
-
-
-			ImmutableList.of(
-					Identifiers.Server_ServerStatus_State,
-					Identifiers.Server_ServerStatus_CurrentTime);
-			
-		
-//			for(NodeId ni:nodeIds) {
-//			
-//				System.out.println(ni.toParseableString());
-//				System.out.println(ni.getIdentifier().toString());
-//			}
-//			
-
-			Object temp = null;
-			Object pressure = null;
-			Object time = null;
-			
-			//readValue(client, future);
-			while(true) {
-				try {
 				temp= client.readValue(0, null, new NodeId(2, 2)).get().getValue().getValue();
 				pressure= client.readValue(0, null, new NodeId(2, 3)).get().getValue().getValue();
 				time= client.readValue(0, null, new NodeId(2, 4)).get().getValue().getValue();
-				}
-				catch (Exception e) {
-					System.out.println("Waiting");
-				}   
+			}
+			catch (Exception e) {
+				System.out.println("Waiting");
+			}   
 			System.out.println("Temprature : "+temp + "  Pressure : "+ pressure + "  Time :  "+ time);
-			
-			Thread.sleep(11);
-			}
 
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			System.out.println("Connection Lost : waiting to get back online");
-		}   
-			
-	}
-	 public static void readValue(OpcUaClient client, CompletableFuture<OpcUaClient> future) {
-
-	        // synchronous read request via VariableNode
-	        org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode node = client.getAddressSpace().createVariableNode(Identifiers.Server_ServerStatus_StartTime);
-	        DataValue value = null;
 			try {
-				value = node.readValue().get();
+				Thread.sleep(11);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.out.println("Sleep exception, better rethrow");
 			}
+		}
 
-	        System.out.println(" --- > "+value);
-	    }
+	}  
 
-	@SuppressWarnings({ "unused", "deprecation" })
+
+
+	
 	private static void browseNode(String indent, OpcUaClient client, NodeId browseRoot) {
 
 		BrowseDescription browse = new BrowseDescription(
@@ -151,7 +120,7 @@ public class Client  {
 
 		} catch (Exception ex) {
 			System.out.println("Server not up");
-			
+
 
 		}
 		return endpoints;
